@@ -9,9 +9,9 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Guides",
+        "group": "Guides",
         "groups": [
           {
             "group": "Getting started",
@@ -22,7 +22,7 @@
         ]
       },
       {
-        "tab": "Securing Linux",
+        "group": "Securing Linux",
         "pages": [
           "securing-linux/personal-user",
           "securing-linux/automatic-updates",
