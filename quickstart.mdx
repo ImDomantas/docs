@@ -1,80 +1,331 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "UFW Firewall"
+description: "Complete guide to installing, configuring, and managing UFW firewall on Linux"
 ---
 
-## Get started in three steps
+<Info>
+  **Prerequisites**:
 
-Get your documentation site running locally and make your first customization.
+  - Linux system with sudo/root access
+  - Basic command line knowledge
+</Info>
 
-### Step 1: Set up your local environment
+UFW (Uncomplicated Firewall) is a user-friendly interface for managing iptables firewall rules on Linux. This guide will help you install, enable, and configure UFW to secure your system.
+
+## Installation
+
+<Steps>
+  <Step title="Install UFW">
+    UFW is typically pre-installed on Ubuntu and Debian systems. If it's not installed, use your package manager:
+
+    **Ubuntu/Debian:**
+
+    ```bash
+    sudo apt update
+    sudo apt install ufw
+    ```
+
+    **CentOS/RHEL/Fedora:**
+
+    ```bash
+    sudo yum install ufw
+    # or for newer versions
+    sudo dnf install ufw
+    ```
+  </Step>
+  <Step title="Check UFW status">
+    Verify that UFW is installed and check its current status:
+
+    ```bash
+    sudo ufw status
+    ```
+
+    If UFW is inactive, you'll see `Status: inactive`. If it's active, you'll see a list of current rules.
+  </Step>
+</Steps>
+
+## Enabling UFW
+
+<Warning>
+  Before enabling UFW, make sure you have SSH access configured, or you may lock yourself out of your server. Always allow SSH first!
+</Warning>
+
+<Steps>
+  <Step title="Allow SSH (Critical!)">
+    Before enabling UFW, allow SSH connections to prevent being locked out:
+
+    ```bash
+    sudo ufw allow ssh
+    # or specify the port if you use a custom SSH port
+    sudo ufw allow 22/tcp
+    ```
+  </Step>
+  <Step title="Enable UFW">
+    Once SSH is allowed, enable UFW:
+
+    ```bash
+    sudo ufw enable
+    ```
+
+    You'll be prompted to confirm. Type `y` and press Enter.
+  </Step>
+  <Step title="Verify UFW is active">
+    Check that UFW is now active:
+
+    ```bash
+    sudo ufw status verbose
+    ```
+  </Step>
+</Steps>
+
+## Configuring Ports for Services
+
+Configure UFW to allow traffic for your running services.
+
+### Common Service Ports
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="Web Server (HTTP/HTTPS)" icon="globe">
+    Allow HTTP and HTTPS traffic:
+
+    ```bash
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    ```
+
+    Or allow both at once:
+
+    ```bash
+    sudo ufw allow 'Nginx Full'
+    # or for Apache
+    sudo ufw allow 'Apache Full'
+    ```
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+  <Accordion title="Database (MySQL/MariaDB)" icon="database">
+    Allow MySQL connections (default port 3306):
+
+    ```bash
+    sudo ufw allow 3306/tcp
+    ```
+
+    <Warning>
+      Only allow database access from trusted IPs in production. Use: `sudo ufw allow from YOUR_IP to any port 3306`
+    </Warning>
+  </Accordion>
+  <Accordion title="PostgreSQL" icon="database">
+    Allow PostgreSQL connections (default port 5432):
+
+    ```bash
+    sudo ufw allow 5432/tcp
+    ```
+  </Accordion>
+  <Accordion title="Custom Application Ports" icon="code">
+    Allow traffic on any custom port:
+
+    ```bash
+    # Allow TCP on port 3000
+    sudo ufw allow 3000/tcp
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    # Allow UDP on port 5000
+    sudo ufw allow 5000/udp
+    
+    # Allow both TCP and UDP
+    sudo ufw allow 8080
+    ```
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+### Allow from Specific IP Addresses
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+To restrict access to specific IP addresses:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash
+# Allow SSH only from a specific IP
+sudo ufw allow from 192.168.1.100 to any port 22
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+# Allow database access from a specific subnet
+sudo ufw allow from 192.168.1.0/24 to any port 3306
+```
 
-### Step 3: Go live
+## Blocking ICMP Echo Requests (Ping)
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+To block ping requests and make your server less visible to network scans:
 
-## Next steps
+<Steps>
+  <Step title="Edit UFW before.rules">
+    Open the UFW before.rules file:
 
-Now that you have your docs running, explore these key features:
+    ```bash
+    sudo nano /etc/ufw/before.rules
+    ```
+  </Step>
+  <Step title="Add ICMP blocking rule">
+    Locate the line `# ok icmp codes for INPUT` and add the following rule right below it:
 
-<CardGroup cols={2}>
+    ```bash
+    # ok icmp codes for INPUT
+    -A ufw-before-input -p icmp --icmp-type echo-request -j DROP
+    ```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    Save the file (Ctrl+O, Enter, Ctrl+X in nano).
+  </Step>
+  <Step title="Reload UFW">
+    Apply the changes:
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+    ```bash
+    sudo ufw reload
+    ```
+  </Step>
+</Steps>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  After this change, your server will not respond to ping requests, which can help prevent some types of network scanning and attacks.
+</Note>
+
+## Managing Firewall Rules
+
+### Viewing Rules
+
+```bash
+# Show numbered rules
+sudo ufw status numbered
+
+# Show verbose output with more details
+sudo ufw status verbose
+```
+
+### Deleting Rules
+
+<AccordionGroup>
+  <Accordion title="Delete by rule number" icon="trash">
+    First, list rules with numbers:
+
+    ```bash
+    sudo ufw status numbered
+    ```
+
+    Then delete by number:
+
+    ```bash
+    sudo ufw delete 3
+    ```
+
+    Replace `3` with the rule number you want to delete.
+  </Accordion>
+  <Accordion title="Delete by rule specification" icon="trash">
+    Delete a rule by specifying it exactly:
+
+    ```bash
+    sudo ufw delete allow 80/tcp
+    ```
+
+    UFW will prompt you to confirm the deletion.
+  </Accordion>
+</AccordionGroup>
+
+### Resetting UFW
+
+To remove all rules and start fresh:
+
+```bash
+sudo ufw reset
+```
+
+<Warning>
+  This will delete all UFW rules and disable the firewall. You'll need to reconfigure it afterward.
+</Warning>
+
+## Disabling UFW
+
+To temporarily disable UFW (rules are preserved):
+
+```bash
+sudo ufw disable
+```
+
+To re-enable:
+
+```bash
+sudo ufw enable
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Default Policies" icon="shield">
+    Set default deny policies:
+
+    ```bash
+    sudo ufw default deny incoming
+    sudo ufw default allow outgoing
+    ```
+  </Card>
+  <Card title="Rate Limiting" icon="clock">
+    Enable rate limiting for SSH:
+
+    ```bash
+    sudo ufw limit ssh/tcp
+    ```
+  </Card>
+  <Card title="Logging" icon="file-lines">
+    Enable logging to monitor firewall activity:
+
+    ```bash
+    sudo ufw logging on
+    ```
+
+    Logs are stored in `/var/log/ufw.log`
+  </Card>
+  <Card title="Regular Audits" icon="magnifying-glass">
+    Regularly review your firewall rules:
+
+    ```bash
+    sudo ufw status verbose
+    ```
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Locked out of SSH">
+    If you're locked out, you'll need console access (KVM, VNC, or physical access):
+
+    1. Access the server console
+    2. Disable UFW: `sudo ufw disable`
+    3. Reconfigure SSH access: `sudo ufw allow ssh`
+    4. Re-enable UFW: `sudo ufw enable`
+  </Accordion>
+  <Accordion title="Service not accessible after adding rule">
+    Check if the rule was added correctly:
+
+    ```bash
+    sudo ufw status | grep PORT_NUMBER
+    ```
+
+    Make sure the service is running and listening on the correct port:
+
+    ```bash
+    sudo netstat -tulpn | grep PORT_NUMBER
+    ```
+  </Accordion>
+  <Accordion title="UFW not starting">
+    Check UFW status and logs:
+
+    ```bash
+    sudo ufw status verbose
+    sudo tail -f /var/log/ufw.log
+    ```
+
+    Ensure UFW service is enabled:
+
+    ```bash
+    sudo systemctl status ufw
+    sudo systemctl enable ufw
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  **Need more help?** Check the UFW manual: `man ufw` or visit the [UFW documentation](https://help.ubuntu.com/community/UFW).
 </Note>

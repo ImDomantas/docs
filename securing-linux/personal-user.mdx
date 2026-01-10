@@ -1,0 +1,306 @@
+---
+title: "User Management"
+description: "Create personal user accounts with sudo privileges and manage user access on Linux"
+---
+
+<Info>
+  **Prerequisites**:
+
+  - Linux server with root/sudo access
+  - SSH or console access to your server
+</Info>
+
+Creating a personal user account with sudo privileges is a critical first step in securing your Linux server. This allows you to disable root login while maintaining administrative access through your personal account.
+
+## Why Create a Personal User?
+
+<CardGroup cols={2}>
+  <Card title="Security" icon="shield">
+    Disabling root login prevents attackers from directly accessing the root account, even if they obtain credentials.
+  </Card>
+  <Card title="Accountability" icon="user">
+    Using personal accounts makes it easier to track who performed what actions on the system.
+  </Card>
+  <Card title="Best Practice" icon="check-circle">
+    Industry standard security practice recommended by security experts and compliance frameworks.
+  </Card>
+  <Card title="Flexibility" icon="gear">
+    Multiple users can have sudo access, allowing for better access management.
+  </Card>
+</CardGroup>
+
+## Creating a Personal User
+
+<Warning>
+  **Important**: Create your personal user account and verify sudo access BEFORE disabling root login. Otherwise, you may lock yourself out of your server.
+</Warning>
+
+<Steps>
+  <Step title="Create a new user">
+    Create a new user account (replace `username` with your desired username):
+
+    ```bash
+    sudo adduser username
+    ```
+
+    You'll be prompted to:
+
+    - Set a password (choose a strong password)
+    - Provide optional user information (full name, room number, work phone, etc.)
+    - Confirm the information
+
+    <Note>
+      You can also use `useradd` instead of `adduser`, but `adduser` is more interactive and user-friendly on Debian/Ubuntu systems.
+    </Note>
+  </Step>
+  <Step title="Add user to sudo group">
+    Grant sudo privileges to the new user:
+
+    ```bash
+    sudo usermod -aG sudo username
+    ```
+
+    This adds the user to the `sudo` group, which allows them to execute commands with administrative privileges.
+
+    <Note>
+      On some systems (like RHEL/CentOS), the group might be called `wheel` instead of `sudo`. Use: `sudo usermod -aG wheel username`
+    </Note>
+  </Step>
+  <Step title="Verify user creation">
+    Switch to the new user and verify sudo access:
+
+    ```bash
+    su - username
+    sudo whoami
+    ```
+
+    If successful, `sudo whoami` should return `root`. This confirms that:
+
+    - The user account was created successfully
+    - The user has sudo privileges
+    - You can execute administrative commands
+  </Step>
+  <Step title="Test sudo access">
+    Try running a command that requires sudo:
+
+    ```bash
+    sudo apt update
+    # or on RHEL/CentOS
+    sudo yum update
+    ```
+
+    You'll be prompted for your user's password (not root's password). If the command executes successfully, your sudo access is working correctly.
+  </Step>
+</Steps>
+
+## Alternative: Create User with Sudo in One Command
+
+You can create a user and add them to the sudo group in a single command:
+
+```bash
+sudo adduser --ingroup sudo username
+```
+
+Or using `useradd`:
+
+```bash
+sudo useradd -m -s /bin/bash -G sudo username
+sudo passwd username
+```
+
+## Managing User Accounts
+
+<AccordionGroup>
+  <Accordion title="Change user password" icon="key">
+    Change a user's password:
+
+    ```bash
+    sudo passwd username
+    ```
+
+    You'll be prompted to enter the new password twice.
+  </Accordion>
+  <Accordion title="Remove sudo privileges" icon="user-xmark">
+    Remove a user from the sudo group:
+
+    ```bash
+    sudo deluser username sudo
+    # or on some systems
+    sudo gpasswd -d username sudo
+    ```
+  </Accordion>
+  <Accordion title="Add user to additional groups" icon="users">
+    Add a user to additional groups:
+
+    ```bash
+    sudo usermod -aG group1,group2 username
+    ```
+
+    Common groups:
+
+    - `sudo` or `wheel` - Administrative privileges
+    - `docker` - Docker access
+    - `www-data` - Web server access
+  </Accordion>
+  <Accordion title="Delete a user account" icon="trash">
+    Delete a user account:
+
+    ```bash
+    # Delete user but keep home directory
+    sudo deluser username
+    
+    # Delete user and home directory
+    sudo deluser --remove-home username
+    ```
+
+    <Warning>
+      Be careful when deleting user accounts. Make sure you have backups of important data.
+    </Warning>
+  </Accordion>
+  <Accordion title="List all users" icon="list">
+    View all users on the system:
+
+    ```bash
+    # List all users
+    cat /etc/passwd | cut -d: -f1
+    
+    # List users with sudo access
+    getent group sudo | cut -d: -f4
+    ```
+  </Accordion>
+  <Accordion title="View user information" icon="circle-info">
+    Get detailed information about a user:
+
+    ```bash
+    # View user details
+    id username
+    
+    # View groups user belongs to
+    groups username
+    
+    # View user's home directory
+    echo ~username
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Sudo Configuration
+
+### Understanding Sudo
+
+Sudo (Super User Do) allows users to run commands with the privileges of another user, typically root. Users in the `sudo` group can execute administrative commands by prefixing them with `sudo`.
+
+### Sudo Configuration File
+
+The sudo configuration is located at `/etc/sudoers`. **Never edit this file directly!** Always use `visudo`:
+
+```bash
+sudo visudo
+```
+
+<Warning>
+  Syntax errors in `/etc/sudoers` can lock you out of sudo access. Always use `visudo` which validates syntax before saving.
+</Warning>
+
+### Common Sudo Configurations
+
+<AccordionGroup>
+  <Accordion title="Allow sudo without password" icon="lock-open">
+    Allow specific users to use sudo without entering a password:
+
+    ```bash
+    sudo visudo
+    ```
+
+    Add this line (replace `username`):
+
+    ```
+    username ALL=(ALL) NOPASSWD: ALL
+    ```
+
+    <Warning>
+      This reduces security. Only use for trusted users or specific use cases.
+    </Warning>
+  </Accordion>
+  <Accordion title="Restrict sudo to specific commands" icon="ban">
+    Allow a user to run only specific commands with sudo:
+
+    ```
+    username ALL=(ALL) /usr/bin/apt, /usr/bin/systemctl
+    ```
+
+    This allows the user to only run `apt` and `systemctl` with sudo.
+  </Accordion>
+  <Accordion title="Sudo timeout" icon="clock">
+    By default, sudo remembers your password for 15 minutes. To change this:
+
+    ```
+    Defaults timestamp_timeout=30
+    ```
+
+    Set to `0` to require password every time, or a number for minutes.
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Strong Passwords" icon="key">
+    Use strong, unique passwords for all user accounts. Consider using a password manager.
+  </Card>
+  <Card title="Limit Sudo Access" icon="user-shield">
+    Only grant sudo access to users who need it. Regularly review who has sudo privileges.
+  </Card>
+  <Card title="Regular Audits" icon="magnifying-glass">
+    Periodically review user accounts and remove unused or unnecessary accounts.
+  </Card>
+  <Card title="SSH Keys" icon="key">
+    After creating your user, set up SSH key authentication instead of passwords. See our [SSH Security guide](/ssh-security).
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+After creating your personal user account:
+
+1. **Set up SSH keys** - Configure key-based authentication for your new user. See [SSH Security](/ssh-security).
+2. **Disable root login** - Once you've verified your user account works, disable root SSH access.
+3. **Configure firewall** - Set up UFW to protect your server. See [Firewall Configuration](/development).
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="User can't use sudo">
+    Verify the user is in the sudo group:
+
+    ```bash
+    groups username
+    ```
+
+    If not, add them:
+
+    ```bash
+    sudo usermod -aG sudo username
+    ```
+
+    The user may need to log out and back in for changes to take effect.
+  </Accordion>
+  <Accordion title="Permission denied errors">
+    Check:
+
+    1. User is in sudo group: `groups username`
+    2. Sudoers file syntax: `sudo visudo -c`
+    3. User is using `sudo` prefix: `sudo command`
+  </Accordion>
+  <Accordion title="Can't switch to new user">
+    If `su - username` fails:
+
+    1. Verify user exists: `id username`
+    2. Check if account is locked: `sudo passwd -S username`
+    3. Ensure user has a valid shell: `cat /etc/passwd | grep username`
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  **Remember**: Always test your user account thoroughly before disabling root login. Keep a root session open as a backup until you're confident everything works.
+</Note>

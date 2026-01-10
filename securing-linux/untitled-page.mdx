@@ -1,0 +1,376 @@
+---
+title: "SSH Hardening"
+description: "Complete guide to securing SSH access: creating users, SSH keys, and hardening SSH configuration"
+---
+
+<Info>
+  **Prerequisites**:
+
+  - Linux server with root/sudo access
+  - SSH access to your server
+  - Windows machine with command prompt access (for SSH key generation)
+</Info>
+
+Securing SSH access is critical for protecting your Linux server from unauthorized access. This guide covers creating a personal user, setting up SSH keys, and hardening your SSH configuration.
+
+## Creating a Personal User
+
+Before disabling root login, create a personal user account with sudo privileges.
+
+<Steps>
+  <Step title="Create a new user">
+    Create a new user account (replace `username` with your desired username):
+
+    ```bash
+    sudo adduser username
+    ```
+
+    You'll be prompted to set a password and provide optional user information.
+  </Step>
+  <Step title="Add user to sudo group">
+    Grant sudo privileges to the new user:
+
+    ```bash
+    sudo usermod -aG sudo username
+    ```
+
+    This allows the user to execute commands with administrative privileges.
+  </Step>
+  <Step title="Verify user creation">
+    Switch to the new user and verify sudo access:
+
+    ```bash
+    su - username
+    sudo whoami
+    ```
+
+    If successful, `sudo whoami` should return `root`.
+  </Step>
+</Steps>
+
+## Setting Up SSH Keys
+
+SSH keys provide a more secure authentication method than passwords. We'll generate keys on Windows and transfer them to your server.
+
+### Generating SSH Keys on Windows
+
+<Steps>
+  <Step title="Open Command Prompt">
+    Open Command Prompt (cmd) or PowerShell on your Windows machine.
+  </Step>
+  <Step title="Generate SSH key pair">
+    Generate a 4096-bit RSA key pair:
+
+    ```cmd
+    ssh-keygen -b 4096
+    ```
+
+    You'll be prompted to:
+
+    - Choose a file location (press Enter for default: `%USERPROFILE%\.ssh\id_rsa`)
+    - Set a passphrase (optional but recommended for extra security)
+  </Step>
+  <Step title="Verify key generation">
+    Your keys are now located at:
+
+    - Private key: `%USERPROFILE%\.ssh\id_rsa` (keep this secret!)
+    - Public key: `%USERPROFILE%\.ssh\id_rsa.pub` (this is what you'll upload)
+  </Step>
+</Steps>
+
+### Uploading SSH Key to Server
+
+<Steps>
+  <Step title="Create .ssh directory on server">
+    SSH into your server and create the `.ssh` directory for your user:
+
+    ```bash
+    mkdir ~/.ssh
+    chmod 700 ~/.ssh
+    ```
+
+    The `chmod 700` ensures only you can read, write, and execute in this directory.
+  </Step>
+  <Step title="Upload public key via SCP">
+    From your Windows machine, use SCP to upload your public key:
+
+    ```cmd
+    scp %USERPROFILE%\.ssh\id_rsa.pub root@SERVER_IP:~/.ssh/authorized_keys
+    ```
+
+    Replace `SERVER_IP` with your server's IP address or hostname.
+
+    <Warning>
+      Make sure you're still logged in as root at this point. After we secure SSH, you'll use your personal user account.
+    </Warning>
+  </Step>
+  <Step title="Set correct permissions">
+    On the server, set the correct permissions for the authorized_keys file:
+
+    ```bash
+    chmod 600 ~/.ssh/authorized_keys
+    ```
+
+    This ensures only you can read and write the file.
+  </Step>
+  <Step title="Test SSH key authentication">
+    From your Windows machine, test the connection:
+
+    ```cmd
+    ssh root@SERVER_IP
+    ```
+
+    You should be able to connect without entering a password (unless you set a passphrase on your key).
+  </Step>
+</Steps>
+
+### Adding SSH Key for Personal User
+
+If you want to use SSH keys with your personal user account:
+
+<Steps>
+  <Step title="Create .ssh directory for user">
+    ```bash
+    sudo mkdir /home/username/.ssh
+    sudo chmod 700 /home/username/.ssh
+    ```
+  </Step>
+  <Step title="Copy authorized_keys">
+    ```bash
+    sudo cp ~/.ssh/authorized_keys /home/username/.ssh/
+    sudo chown username:username /home/username/.ssh/authorized_keys
+    sudo chmod 600 /home/username/.ssh/authorized_keys
+    ```
+  </Step>
+</Steps>
+
+## Securing SSH Configuration
+
+Now we'll harden your SSH configuration to prevent common attacks.
+
+<Warning>
+  **Critical**: Before making these changes, ensure you have:
+
+  1. Created a personal user with sudo access
+  2. Successfully tested SSH key authentication
+  3. A backup SSH session open (in case you get locked out)
+</Warning>
+
+<Steps>
+  <Step title="Backup SSH configuration">
+    Create a backup of your SSH configuration:
+
+    ```bash
+    sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
+    ```
+  </Step>
+  <Step title="Edit SSH configuration">
+    Open the SSH configuration file:
+
+    ```bash
+    sudo nano /etc/ssh/sshd_config
+    ```
+  </Step>
+  <Step title="Change SSH port">
+    Find the line `#Port 22` and change it to a random high port (between 1024 and 65535):
+
+    ```bash
+    Port 23456
+    ```
+
+    <Note>
+      Choose a random port number. Common high ports to avoid: 2222, 22222. Pick something random like 23456, 45678, or 54321.
+    </Note>
+  </Step>
+  <Step title="Set AddressFamily to inet">
+    Find the line `#AddressFamily any` and change it to:
+
+    ```bash
+    AddressFamily inet
+    ```
+
+    This restricts SSH to IPv4 only, which is more secure and prevents IPv6-related issues.
+  </Step>
+  <Step title="Disable root login">
+    Find the line `#PermitRootLogin yes` and change it to:
+
+    ```bash
+    PermitRootLogin no
+    ```
+
+    This prevents anyone from logging in as root, even with a valid key.
+  </Step>
+  <Step title="Disable password authentication">
+    Find the line `#PasswordAuthentication yes` and change it to:
+
+    ```bash
+    PasswordAuthentication no
+    ```
+
+    This forces all users to use SSH key authentication, making brute-force attacks impossible.
+  </Step>
+  <Step title="Save and exit">
+    Save the file (Ctrl+O, Enter, Ctrl+X in nano).
+  </Step>
+  <Step title="Test configuration">
+    Before restarting SSH, test the configuration for syntax errors:
+
+    ```bash
+    sudo sshd -t
+    ```
+
+    If there are no errors, you'll see no output.
+  </Step>
+  <Step title="Restart SSH service">
+    Restart the SSH service to apply changes:
+
+    ```bash
+    sudo systemctl restart sshd
+    # or on some systems
+    sudo systemctl restart ssh
+    ```
+  </Step>
+</Steps>
+
+## Connecting After Configuration Changes
+
+After securing SSH, you'll need to connect differently:
+
+<Steps>
+  <Step title="Connect with new port">
+    From your Windows machine, connect using the new port:
+
+    ```cmd
+    ssh -p 23456 username@SERVER_IP
+    ```
+
+    Replace `23456` with your chosen port and `username` with your personal user.
+  </Step>
+  <Step title="Update SSH config (optional)">
+    Create or edit `%USERPROFILE%\.ssh\config` on Windows to simplify connections:
+
+    ```
+    Host myserver
+        HostName SERVER_IP
+        Port 23456
+        User username
+        IdentityFile ~/.ssh/id_rsa
+    ```
+
+    Then you can simply connect with:
+
+    ```cmd
+    ssh myserver
+    ```
+  </Step>
+</Steps>
+
+## Complete SSH Configuration Example
+
+Here's a complete hardened SSH configuration (`/etc/ssh/sshd_config`) with recommended settings:
+
+```bash
+# Port configuration
+Port 23456
+AddressFamily inet
+
+# Authentication
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+
+# Security settings
+Protocol 2
+X11Forwarding no
+MaxAuthTries 3
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+```
+
+## Verifying Security Settings
+
+Check that your SSH configuration is secure:
+
+```bash
+# Check SSH service status
+sudo systemctl status sshd
+
+# View current SSH configuration
+sudo sshd -T | grep -E "port|permitrootlogin|passwordauthentication|addressfamily"
+
+# Check active SSH connections
+sudo netstat -tulpn | grep sshd
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Locked out after disabling root login">
+    If you're locked out and don't have console access:
+
+    1. Use your hosting provider's console/KVM access
+    2. Boot into recovery mode if available
+    3. Mount the filesystem and edit `/etc/ssh/sshd_config`
+    4. Change `PermitRootLogin no` to `PermitRootLogin yes` temporarily
+    5. Restart SSH and fix your user account
+  </Accordion>
+  <Accordion title="Can't connect after changing port">
+    Make sure:
+
+    1. The new port is allowed in UFW: `sudo ufw allow 23456/tcp`
+    2. Your firewall isn't blocking the port
+    3. You're using the correct port: `ssh -p 23456 username@SERVER_IP`
+    4. SSH service is running: `sudo systemctl status sshd`
+  </Accordion>
+  <Accordion title="SSH key not working">
+    Verify:
+
+    1. Public key is in `~/.ssh/authorized_keys`
+    2. Permissions are correct:
+       - `~/.ssh` should be `700`
+       - `~/.ssh/authorized_keys` should be `600`
+    3. Private key matches public key on server
+    4. SELinux isn't blocking (if enabled): `sudo restorecon -R ~/.ssh`
+  </Accordion>
+  <Accordion title="Permission denied errors">
+    Check file ownership:
+
+    ```bash
+    sudo chown -R username:username ~/.ssh
+    sudo chmod 700 ~/.ssh
+    sudo chmod 600 ~/.ssh/authorized_keys
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Security Checklist
+
+<CardGroup cols={2}>
+  <Card title="✓ User Management" icon="user-check">
+    - Created personal user with sudo access
+    - Root login disabled
+  </Card>
+  <Card title="✓ SSH Keys" icon="key">
+    - Generated 4096-bit SSH key pair
+    - Public key uploaded to server
+    - Password authentication disabled
+  </Card>
+  <Card title="✓ SSH Configuration" icon="shield">
+    - Changed to random high port
+    - AddressFamily set to inet
+    - Root login disabled
+  </Card>
+  <Card title="✓ Firewall" icon="fire">
+    - UFW configured with new SSH port
+    - Only necessary ports open
+  </Card>
+</CardGroup>
+
+<Note>
+  **Best Practice**: Always keep a backup SSH session open when making SSH configuration changes. This prevents you from being locked out if something goes wrong.
+</Note>

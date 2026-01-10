@@ -1,0 +1,553 @@
+---
+title: "Automatic Upgrades"
+description: "Set up automatic security updates and system upgrades on Linux using unattended-upgrades"
+---
+
+<Info>
+  **Prerequisites**:
+  - Ubuntu or Debian-based Linux system
+  - Root or sudo access
+  - Internet connection
+</Info>
+
+Keeping your Linux system updated is crucial for security. This guide shows you how to set up automatic upgrades using `unattended-upgrades` to ensure your system receives security patches automatically.
+
+## Manual System Updates
+
+Before setting up automatic upgrades, understand the basic update commands:
+
+<Steps>
+<Step title="Update package lists">
+
+Refresh the package index to get the latest information about available packages:
+
+```bash
+sudo apt update
+```
+
+This downloads package information from all configured repositories.
+
+</Step>
+
+<Step title="Upgrade installed packages">
+
+Upgrade all installed packages to their latest versions:
+
+```bash
+sudo apt upgrade
+```
+
+You can also combine both commands:
+
+```bash
+sudo apt update && sudo apt upgrade
+```
+
+</Step>
+
+<Step title="Full system upgrade (optional)">
+
+For a complete system upgrade including kernel updates:
+
+```bash
+sudo apt update && sudo apt full-upgrade
+```
+
+<Warning>
+  `full-upgrade` may remove packages if necessary to resolve dependencies. Use with caution on production systems.
+</Warning>
+
+</Step>
+</Steps>
+
+## Installing Unattended-Upgrades
+
+<Steps>
+<Step title="Install unattended-upgrades">
+
+Install the unattended-upgrades package:
+
+```bash
+sudo apt update
+sudo apt install unattended-upgrades
+```
+
+</Step>
+
+<Step title="Verify installation">
+
+Check that the service is installed and running:
+
+```bash
+sudo systemctl status unattended-upgrades
+```
+
+</Step>
+</Steps>
+
+## Configuring Unattended-Upgrades
+
+Configure unattended-upgrades to automatically install security updates.
+
+<Steps>
+<Step title="Run configuration wizard">
+
+Launch the interactive configuration tool:
+
+```bash
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+You'll be presented with a series of prompts:
+
+1. **Automatically download and install stable updates?** - Select "Yes"
+2. **Email address for update notifications** - Enter your email (optional)
+3. **Automatic reboot options** - Choose based on your needs
+
+</Step>
+
+<Step title="Manual configuration (alternative)">
+
+If you prefer manual configuration, edit the configuration file:
+
+```bash
+sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+```
+
+</Step>
+</Steps>
+
+## Configuration File Settings
+
+The main configuration file is located at `/etc/apt/apt.conf.d/50unattended-upgrades`. Here are key settings:
+
+<AccordionGroup>
+  <Accordion title="Update Origins" icon="globe">
+    
+    Specify which updates to install. The default configuration includes:
+    
+    ```bash
+    Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}-security";
+        "${distro_id}ESMApps:${distro_codename}-apps-security";
+        "${distro_id}ESM:${distro_codename}-infra-security";
+    };
+    ```
+    
+    This ensures only security updates are installed automatically.
+    
+  </Accordion>
+  
+  <Accordion title="Package Blacklist" icon="ban">
+    
+    Prevent specific packages from being automatically updated:
+    
+    ```bash
+    Unattended-Upgrade::Package-Blacklist {
+        "package-name";
+        "another-package";
+    };
+    ```
+    
+    Useful for packages that require manual intervention or testing.
+    
+  </Accordion>
+  
+  <Accordion title="Automatic Reboot" icon="rotate">
+    
+    Configure automatic reboots after updates:
+    
+    ```bash
+    # Reboot automatically when needed
+    Unattended-Upgrade::Automatic-Reboot "false";
+    
+    # Reboot even if users are logged in
+    Unattended-Upgrade::Automatic-Reboot-WithUsers "false";
+    
+    # Reboot at a specific time
+    Unattended-Upgrade::Automatic-Reboot-Time "02:00";
+    ```
+    
+    <Warning>
+      Automatic reboots can disrupt services. Only enable if your system can handle unexpected reboots.
+    </Warning>
+    
+  </Accordion>
+  
+  <Accordion title="Email Notifications" icon="envelope">
+    
+    Receive email notifications about updates:
+    
+    ```bash
+    Unattended-Upgrade::Mail "your-email@example.com";
+    Unattended-Upgrade::MailOnlyOnError "true";
+    ```
+    
+    Set `MailOnlyOnError` to `false` to receive notifications for all updates.
+    
+  </Accordion>
+  
+  <Accordion title="Remove Unused Dependencies" icon="trash">
+    
+    Automatically remove unused packages after updates:
+    
+    ```bash
+    Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+    Unattended-Upgrade::Remove-Unused-Dependencies "true";
+    Unattended-Upgrade::Automatic-Remove "true";
+    ```
+    
+  </Accordion>
+</AccordionGroup>
+
+## Enable Automatic Updates
+
+<Steps>
+<Step title="Enable automatic updates">
+
+Create or edit the auto-update configuration file:
+
+```bash
+sudo nano /etc/apt/apt.conf.d/20auto-upgrades
+```
+
+Add the following configuration:
+
+```bash
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+```
+
+</Step>
+
+<Step title="Configuration values explained">
+
+- `Update-Package-Lists "1"` - Update package lists daily
+- `Unattended-Upgrade "1"` - Run unattended-upgrade daily
+- `Download-Upgradeable-Packages "1"` - Download upgradeable packages daily
+- `AutocleanInterval "7"` - Clean package cache every 7 days
+
+Values are in days. Use `"0"` to disable a feature.
+
+</Step>
+
+<Step title="Verify configuration">
+
+Check that automatic updates are enabled:
+
+```bash
+cat /etc/apt/apt.conf.d/20auto-upgrades
+```
+
+</Step>
+</Steps>
+
+## Testing Unattended-Upgrades
+
+<Steps>
+<Step title="Test configuration">
+
+Test the configuration without making changes:
+
+```bash
+sudo unattended-upgrades --dry-run --debug
+```
+
+This shows what would be updated without actually installing anything.
+
+</Step>
+
+<Step title="Manually trigger updates">
+
+Force unattended-upgrades to run immediately:
+
+```bash
+sudo unattended-upgrades
+```
+
+</Step>
+
+<Step title="Check update logs">
+
+View logs to see what updates were installed:
+
+```bash
+# View recent logs
+sudo tail -f /var/log/unattended-upgrades/unattended-upgrades.log
+
+# View today's updates
+sudo cat /var/log/unattended-upgrades/unattended-upgrades.log | grep "$(date +%Y-%m-%d)"
+```
+
+</Step>
+</Steps>
+
+## Monitoring Automatic Upgrades
+
+<AccordionGroup>
+  <Accordion title="Check update status" icon="circle-check">
+    
+    View the current status of automatic updates:
+    
+    ```bash
+    sudo unattended-upgrades --dry-run
+    ```
+    
+  </Accordion>
+  
+  <Accordion title="View update history" icon="clock-rotate-left">
+    
+    Check what updates have been installed:
+    
+    ```bash
+    # View package update history
+    grep "Unattended-Upgrade:" /var/log/unattended-upgrades/unattended-upgrades.log
+    
+    # View all package installations
+    grep "Inst" /var/log/unattended-upgrades/unattended-upgrades.log
+    ```
+    
+  </Accordion>
+  
+  <Accordion title="Check for pending updates" icon="list">
+    
+    See what updates are available:
+    
+    ```bash
+    sudo apt list --upgradable
+    ```
+    
+  </Accordion>
+  
+  <Accordion title="Service status" icon="gear">
+    
+    Check if the unattended-upgrades service is running:
+    
+    ```bash
+    sudo systemctl status unattended-upgrades
+    ```
+    
+  </Accordion>
+</AccordionGroup>
+
+## Recommended Configuration
+
+Here's a complete recommended configuration for production servers:
+
+### `/etc/apt/apt.conf.d/50unattended-upgrades`
+
+```bash
+Unattended-Upgrade::Allowed-Origins {
+    "${distro_id}:${distro_codename}-security";
+    "${distro_id}ESMApps:${distro_codename}-apps-security";
+    "${distro_id}ESM:${distro_codename}-infra-security";
+};
+
+// Only install security updates
+Unattended-Upgrade::Package-Blacklist {
+    // Add packages that should never be auto-updated
+};
+
+// Email notifications
+Unattended-Upgrade::Mail "admin@example.com";
+Unattended-Upgrade::MailOnlyOnError "true";
+
+// Automatic reboot (disabled by default)
+Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "false";
+
+// Clean up after updates
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+Unattended-Upgrade::Automatic-Remove "true";
+```
+
+### `/etc/apt/apt.conf.d/20auto-upgrades`
+
+```bash
+// Update package lists daily
+APT::Periodic::Update-Package-Lists "1";
+
+// Run unattended-upgrade daily
+APT::Periodic::Unattended-Upgrade "1";
+
+// Download upgradeable packages daily
+APT::Periodic::Download-Upgradeable-Packages "1";
+
+// Clean package cache weekly
+APT::Periodic::AutocleanInterval "7";
+```
+
+## Disabling Automatic Upgrades
+
+If you need to disable automatic upgrades:
+
+<Steps>
+<Step title="Disable automatic updates">
+
+Edit the configuration file:
+
+```bash
+sudo nano /etc/apt/apt.conf.d/20auto-upgrades
+```
+
+Change values to `"0"` to disable:
+
+```bash
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+```
+
+</Step>
+
+<Step title="Stop the service">
+
+Stop and disable the unattended-upgrades service:
+
+```bash
+sudo systemctl stop unattended-upgrades
+sudo systemctl disable unattended-upgrades
+```
+
+</Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Updates not installing automatically">
+    
+    Check:
+    
+    1. Service status: `sudo systemctl status unattended-upgrades`
+    2. Configuration files: `cat /etc/apt/apt.conf.d/20auto-upgrades`
+    3. Logs: `sudo tail -f /var/log/unattended-upgrades/unattended-upgrades.log`
+    4. Test manually: `sudo unattended-upgrades --dry-run`
+    
+  </Accordion>
+  
+  <Accordion title="Too many email notifications">
+    
+    Reduce notification frequency:
+    
+    ```bash
+    Unattended-Upgrade::MailOnlyOnError "true";
+    ```
+    
+    Or disable email notifications entirely by removing or commenting out the Mail line.
+    
+  </Accordion>
+  
+  <Accordion title="Packages being updated that shouldn't be">
+    
+    Add packages to the blacklist in `/etc/apt/apt.conf.d/50unattended-upgrades`:
+    
+    ```bash
+    Unattended-Upgrade::Package-Blacklist {
+        "problematic-package";
+        "another-package";
+    };
+    ```
+    
+  </Accordion>
+  
+  <Accordion title="System rebooting unexpectedly">
+    
+    Disable automatic reboots:
+    
+    ```bash
+    Unattended-Upgrade::Automatic-Reboot "false";
+    ```
+    
+    Then restart the service:
+    
+    ```bash
+    sudo systemctl restart unattended-upgrades
+    ```
+    
+  </Accordion>
+  
+  <Accordion title="Disk space issues">
+    
+    Automatic updates can fill up disk space. Enable automatic cleanup:
+    
+    ```bash
+    Unattended-Upgrade::Automatic-Remove "true";
+    APT::Periodic::AutocleanInterval "7";
+    ```
+    
+    Manually clean up:
+    
+    ```bash
+    sudo apt autoremove
+    sudo apt autoclean
+    ```
+    
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Security Updates Only" icon="shield">
+    Configure to install only security updates automatically. Regular updates can be done manually after testing.
+  </Card>
+  
+  <Card title="Email Notifications" icon="envelope">
+    Set up email notifications to monitor what updates are being installed.
+  </Card>
+  
+  <Card title="Package Blacklist" icon="ban">
+    Blacklist critical packages that require manual testing before updates.
+  </Card>
+  
+  <Card title="Regular Monitoring" icon="magnifying-glass">
+    Review logs weekly to ensure updates are installing correctly.
+  </Card>
+  
+  <Card title="Backup Before Updates" icon="floppy-disk">
+    Ensure you have backups before enabling automatic updates on production systems.
+  </Card>
+  
+  <Card title="Test Environment" icon="flask">
+    Test automatic updates in a staging environment before enabling on production.
+  </Card>
+</CardGroup>
+
+## Quick Reference
+
+<Steps>
+<Step title="Install and configure">
+
+```bash
+sudo apt update
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+</Step>
+
+<Step title="Manual update">
+
+```bash
+sudo apt update && sudo apt upgrade
+```
+
+</Step>
+
+<Step title="Check status">
+
+```bash
+sudo unattended-upgrades --dry-run
+sudo systemctl status unattended-upgrades
+```
+
+</Step>
+</Steps>
+
+<Note>
+  **Important**: While automatic updates improve security, always test updates in a staging environment first, especially for production systems. Consider blacklisting critical packages that require manual testing.
+</Note>
