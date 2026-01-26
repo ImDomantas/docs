@@ -16,7 +16,7 @@
     "groups": [
       {
         "group": "Guides",
-        "groups": [
+        "pages": [
           {
             "group": "Getting started",
             "pages": [
@@ -28,10 +28,10 @@
       {
         "group": "Securing Linux",
         "pages": [
-          "securing-linux/personal-user",
+          "quickstart",
           "securing-linux/automatic-updates",
           "securing-linux/untitled-page",
-          "quickstart"
+          "securing-linux/personal-user"
         ]
       }
     ]
