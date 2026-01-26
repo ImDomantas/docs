@@ -2,6 +2,10 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Goproxy Securewire",
+  "baseUrl": "https://securewire.goproxy.co.uk",
+  "metaTitle": "Securewire - Linux Security Guides & Best Practices",
+  "metaDescription": "Comprehensive security guides and best practices for Linux system administrators. Learn how to secure your Linux systems with UFW firewall, SSH hardening, user management, and automatic updates.",
+  "metaImage": "https://securewire.goproxy.co.uk/images/hero-light.png",
   "colors": {
     "primary": "#4C16A3",
     "light": "#7507C9",
