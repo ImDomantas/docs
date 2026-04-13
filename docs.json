@@ -11,6 +11,13 @@
     "light": "#6BC6FA",
     "dark": "#0D4F70"
   },
+  "background": {
+  "decoration": "gradient",
+  "color": {
+    "light": "#121212",
+    "dark": "#121212"
+  }
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "groups": [
