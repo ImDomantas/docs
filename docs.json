@@ -43,7 +43,6 @@
       }
     ]
   },
-  "logo": "/images/SecureWire.png",
   "navbar": {
     "links": [
       {
@@ -68,5 +67,19 @@
      "cursor",
      "vscode"
    ]
+  },
+  "appearance": {
+    "strict": true,
+    "default": "dark"
+  },
+  "fonts": {
+    "family": "Poppins",
+    "weight": 400
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "seo": {
+    "indexing": "all"
   }
 }
